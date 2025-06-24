@@ -1,0 +1,116 @@
+﻿@using Kendo.Mvc.UI
+@model IEnumerable<telerik.Models.Product>
+
+@{
+    ViewData["Title"] = "Home Page";
+    var categoryList = (IEnumerable<dynamic>)ViewBag.CategoryList;
+}
+
+<div class="text-center">
+    <h1 class="display-4">Products</h1>
+
+    @(Html.Kendo().Grid<telerik.Models.Product>()
+        .Name("grid")
+        .Columns(columns =>
+        {
+            columns.Bound(p => p.ProductID).Hidden();
+            columns.Bound(p => p.ProductName).Width(200);
+            columns.Bound(p => p.UnitPrice).Width(150);
+            columns.Bound(p => p.UnitsInStock).Width(150);
+            columns.Bound(p => p.Discontinued).Width(120);
+
+            // Show Category name in display mode
+            columns.Bound(p => p.CategoryID)
+            .Title("Category")
+            .Width(200)
+            .ClientTemplate(
+            "#= getCategoryName(CategoryID) #"
+            )
+            .EditorTemplateName("DropDownEditor"); // Optional fallback
+
+            columns.Command(command => { command.Edit(); command.Destroy(); }).Width(250);
+        })
+        .ToolBar(toolbar =>
+        {
+            toolbar.Create();
+            toolbar.Custom().Text("<input type='text' id='searchBox' placeholder='SEARCH PRODUCT NAME' style='margin: 0; padding:0; width: 250px; border: 0; background-color:transparent; outline: none; color: rgba(68,84,105,0.87)' />");
+        })
+        .Editable(editable => editable.Mode(GridEditMode.InLine))
+        .Pageable()
+        .Sortable()
+        .Filterable()
+        .Scrollable()
+        .HtmlAttributes(new { style = "height:500px; border-color: grey;" })
+        .Events(events => events.DataBound("onGridDataBound").Edit("onEdit"))
+        .DataSource(dataSource => dataSource
+        .Ajax()
+        .PageSize(10)
+        .Model(model => model.Id(p => p.ProductID))
+        .Read(read => read.Action("Grid_Read", "Product").Data("getSearchValue"))
+        .Create(create => create.Action("Grid_Create", "Product"))
+        .Update(update => update.Action("Grid_Update", "Product"))
+        .Destroy(delete => delete.Action("Grid_Destroy", "Product"))
+        )
+        )
+</div>
+
+<script>
+    var categories = @Html.Raw(Json.Serialize(ViewBag.CategoryList));
+
+    function getCategoryName(categoryId) {
+        var category = categories.find(c => c.CategoryID === categoryId);
+        return category ? category.CategoryName : '';
+    }
+
+    function onEdit(e) {
+        var input = e.container.find("input[name='CategoryID']");
+        if (input.length) {
+            input.kendoDropDownList({
+                dataTextField: "CategoryName",
+                dataValueField: "CategoryID",
+                dataSource: categories,
+                optionLabel: "Select category..."
+            });
+        }
+    }
+
+    function getSearchValue() {
+        return {
+            searchTerm: $("#searchBox").val()
+        };
+    }
+
+    function applySearch() {
+        var grid = $("#grid").data("kendoGrid");
+        grid.dataSource.read();
+    }
+
+    let debounceTimer;
+    $(document).on("input", "#searchBox", function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(applySearch, 300);
+    });
+
+    function onGridDataBound(e) {
+        e.sender.hideColumn("ProductID");
+    }
+</script>
+
+
+<style>
+    .k-grid {
+        margin-top: 40px;
+    }
+
+    .k-toolbar {
+        display: flex;
+        justify-content: end;
+        background-color: white;
+    }
+
+    .k-command-cell {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+    }
+</style>

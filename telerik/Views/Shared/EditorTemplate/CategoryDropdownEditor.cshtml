@@ -1,0 +1,16 @@
+﻿@using Kendo.Mvc.UI
+@model int?
+
+@(Html.Kendo().DropDownListFor(m => m)
+    .OptionLabel("Select category...")
+    .DataTextField("CategoryName")
+    .DataValueField("CategoryID")
+    .DataSource(source =>
+    {
+        source.Read(read =>
+        {
+            read.Action("GetCategories", "Product");
+        });
+    })
+    .HtmlAttributes(new { style = "width:100%" })
+)
