@@ -21,6 +21,20 @@ namespace telerik.Controllers
         {
             return View();
         }
+        public IActionResult Shop()
+        {
+            var products = _context.Products
+                .Include(p => p.Category)
+                .ToList();
+
+            ViewBag.CategoryList = _context.Categories.ToList();
+
+            return View(products);  // Pass products as model
+        }
+        public IActionResult Order()
+        {
+            return View();
+        }
 
         public IActionResult Stock()
         {

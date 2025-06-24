@@ -34,12 +34,27 @@
         {
             toolbar.Create();
             toolbar.Custom().Text("<input type='text' id='searchBox' placeholder='SEARCH PRODUCT NAME' style='margin: 0; padding:0; width: 250px; border: 0; background-color:transparent; outline: none; color: rgba(68,84,105,0.87)' />");
+            toolbar.Excel();
+            toolbar.Pdf();
         })
+
         .Editable(editable => editable.Mode(GridEditMode.InLine))
         .Pageable()
         .Sortable()
         .Filterable()
         .Scrollable()
+        .Excel(excel => excel
+        .FileName("Products.xlsx")
+        .Filterable(true)
+        .AllPages(true)
+        )
+        .Pdf(pdf => pdf
+        .FileName("Products.pdf")
+        .AllPages(true)
+        .AvoidLinks(true)
+        .PaperSize("A4")
+        .Landscape()
+        )
         .HtmlAttributes(new { style = "height:500px; border-color: grey;" })
         .Events(events => events.DataBound("onGridDataBound").Edit("onEdit"))
         .DataSource(dataSource => dataSource

@@ -23,11 +23,5 @@ namespace telerik.Controllers
         {
             return View();
         }
-
-        // (optional) if you had a demo/test page
-        public IActionResult Kendo()
-        {
-            return View();
-        }
     }
 }

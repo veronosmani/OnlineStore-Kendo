@@ -28,5 +28,7 @@ namespace telerik.Models
 
         [ForeignKey("CategoryID")]
         public Category? Category { get; set; }
+
+
     }
 }

@@ -1,0 +1,159 @@
+﻿@model IEnumerable<telerik.Models.Product>
+@using telerik.Models
+
+<h1 style="text-align:center;">Shop</h1>
+<div class="order">
+
+            
+@{
+    var categories = (List<Category>)ViewBag.CategoryList;
+}              
+        @{
+            <div class="category-filters" style="text-align:center; margin-bottom: 20px;">
+                @foreach (var category in categories)
+                {
+                    <button class="category-btn" data-categoryid="@category.CategoryID">
+                        @category.CategoryName
+                    </button>
+                }
+            </div>
+}
+
+    <div class="order-cards">
+        @foreach (var product in Model)
+        {
+            <div class="order-card" data-categoryid="@product.CategoryID">
+                <h2 class="order-card-title">@product.ProductName</h2>
+                <div class="order-card-layout">
+                    <p><strong>Name:</strong> @product.ProductName</p>
+                    <p><strong>Price:</strong> @product.UnitPrice.ToString() €</p>
+                    <p><strong>Category:</strong> @product.Category?.CategoryName</p>
+                    <p><strong>Units On Stock:</strong> @product.UnitsInStock</p>
+                    <p><strong>Discontinued:</strong> @(product.Discontinued ? "Yes" : "No")</p>
+                    <div class="order-card-layout-buttons">
+                        <a class="order-card-layout-addToCart" asp-area="" asp-controller="Product" asp-action="Order">
+                            <p class="order-text">Order</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(function(){
+        let selectedCategories = new Set();
+
+        $(".category-btn").click(function(){
+            const categoryId = $(this).data("categoryid");
+
+            if(selectedCategories.has(categoryId)){
+                selectedCategories.delete(categoryId);
+                $(this).css({"background-color": "white", "color": "#007bff"});
+            } else {
+                selectedCategories.add(categoryId);
+                $(this).css({"background-color": "#007bff", "color": "white"});
+            }
+
+            filterProducts();
+        });
+
+        function filterProducts(){
+            if(selectedCategories.size === 0){
+                $(".order-card").show();
+                return;
+            }
+
+            $(".order-card").each(function(){
+                const prodCategoryId = $(this).data("categoryid");
+                if(selectedCategories.has(prodCategoryId)){
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+    });
+</script>
+
+
+<style>
+    .category-filters {
+        margin-top:20px;
+    }
+    .category-btn {
+        margin: 0 8px 8px 0; 
+        padding: 8px 12px; 
+        border-radius: 6px;
+        color: #007bff;
+        border: 1px solid #007bff; 
+        background-color: white; 
+        cursor: pointer;
+    }
+    .order-cards {
+        display: flex;
+        justify-content:center;
+        flex-wrap: wrap;
+        padding: 30px 0;
+        gap: 50px;
+    }
+
+    .order-card {
+        width: 250px;
+        height: 400px;
+        border: 1px solid grey;
+        border-radius: 15px;
+        padding: 20px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .order-card-title {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .order-card-layout {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .order-card-layout-addToCart {
+        text-align: center;
+        text-decoration: none !important;
+        margin-top: auto;
+        padding: 10px 0px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        width: 100%;
+    }
+
+    .order-card-layout-addToCart:hover {
+        background-color: #0056b3;
+        color:white;
+
+    }
+
+    .order-card-layout-buttons {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .order-text {
+        padding: 0;
+        margin: 0;
+        transition: transform 0.3s ease;
+    }
+
+    .order-text:hover {
+        transform: scale(1.1);
+    }
+</style>
