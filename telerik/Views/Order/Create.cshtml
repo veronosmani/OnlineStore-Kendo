@@ -1,0 +1,62 @@
+﻿@model telerik.Models.OrderViewModel
+
+<h2>Order: @Model.ProductName</h2>
+<h2>Price: @Model.UnitPrice</h2>
+
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div style="color:red; margin-bottom: 10px;">@TempData["ErrorMessage"]</div>
+}
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="ProductName" />
+    <input type="hidden" asp-for="ProductId" />
+    <input type="hidden" asp-for="UnitPrice" />
+
+    <p>
+        <label>Quantity:</label><br />
+        <input asp-for="Quantity" type="number" min="1" />
+        <span asp-validation-for="Quantity" style="color:red"></span>
+    </p>
+
+    <p>
+        <label>Full Name:</label><br />
+        <input asp-for="FullName" />
+        <span asp-validation-for="FullName" style="color:red"></span>
+    </p>
+
+    <p>
+        <label>Address:</label><br />
+        <textarea asp-for="Address"></textarea>
+        <span asp-validation-for="Address" style="color:red"></span>
+    </p>
+
+    <p>
+        <label>Email:</label><br />
+        <input asp-for="Email" type="email" />
+        <span asp-validation-for="Email" style="color:red"></span>
+    </p>
+
+    <p>
+        <label>Payment Form:</label><br />
+        <select asp-for="PaymentForm">
+            <option value="">--Select--</option>
+            <option value="Card">Card</option>
+            <option value="Cash">Cash</option>
+        </select>
+        <span asp-validation-for="PaymentForm" style="color:red"></span>
+    </p>
+
+    <button type="submit" style="background:#007bff; color:white; padding: 8px 16px; border:none; border-radius:5px; cursor:pointer;">
+        Submit Order
+    </button>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

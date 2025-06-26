@@ -29,6 +29,9 @@ namespace telerik.Models
         [ForeignKey("CategoryID")]
         public Category? Category { get; set; }
 
+        [NotMapped]
+        public IFormFile? ImageFile { get; set; }  // used only in form
 
+        public string? ImageUrl { get; set; }  // store image path    
     }
-}
+    }

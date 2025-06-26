@@ -1,0 +1,98 @@
+﻿@using Kendo.Mvc.UI
+@model telerik.Models.Product
+
+<div class="create-container">
+    @Html.HiddenFor(m => m.ProductID)
+
+    <div class="create-container-input">
+        @Html.LabelFor(m => m.ProductName, "Product Name", new { @style = "font-size:16px"})
+    </div>
+    <div class="create-container-input">
+        @Html.TextBoxFor(m => m.ProductName, new { @style = "width: 400px; margin-bottom:20px; margin-top: 10px" })
+        @Html.ValidationMessageFor(m => m.ProductName)
+    </div>
+
+    <div class="k-edit-label">
+        @Html.LabelFor(m => m.UnitPrice, "Price Per Unit", new { @style = "font-size:16px" })
+    </div>
+    <div class="k-edit-field">
+        @Html.TextBoxFor(m => m.UnitPrice, new { @style = "width: 400px; margin-bottom:20px; margin-top:10px" })
+        @Html.ValidationMessageFor(m => m.UnitPrice)
+    </div>
+
+    <div class="k-edit-label">
+        @Html.LabelFor(m => m.UnitsInStock, "Units In Stock", new { @style = "font-size:16px" })
+    </div>
+    <div class="k-edit-field">
+        @Html.TextBoxFor(m => m.UnitsInStock, new { @style = "width: 400px; margin-bottom:20px; margin-top:10px" })
+        @Html.ValidationMessageFor(m => m.UnitsInStock)
+    </div>
+
+    <div class="k-edit-label">
+        @Html.LabelFor(m => m.Discontinued, new { @style = "font-size:16px; margin-bottom: 10px" })
+    </div>
+    <div class="k-edit-field">
+        @Html.CheckBoxFor(m => m.Discontinued, new { @style = "margin-bottom: 20px"})
+    </div>
+
+    <div class="k-edit-label">
+        @Html.LabelFor(m => m.CategoryID, "Category", new { @style = "font-size:16px" })
+    </div>
+    <div class="k-edit-field">
+        @Html.DropDownListFor(
+        m => m.CategoryID,
+                new SelectList((IEnumerable<dynamic>)ViewBag.CategoryList, "CategoryID", "CategoryName"),
+                "Select category...",
+                new { @style = "width: 400px; height: 25px; margin-top:10px; margin-bottom: 20px" }
+                )
+        @Html.ValidationMessageFor(m => m.CategoryID)
+    </div>
+
+    <div class="k-edit-label">
+        <label for="ImageFile" style="margin-bottom: 10px; font-size: 16px">Upload Image</label>
+    </div>
+    <div class="k-edit-field">
+
+        @Html.HiddenFor(m => m.ImageUrl)
+
+        @(Html.Kendo().Upload()
+                .Name("ImageFile")
+                .Async(a => a
+                .Save("UploadImage", "Product")
+                .AutoUpload(true)
+                )
+                .Multiple(false)
+                .ShowFileList(true)
+                )
+    </div>
+
+</div>
+
+
+        <style>
+            .create-container {
+                width: 400px;
+                height: 500px;
+            }
+
+    .create-container-input {
+        width:400px;
+
+    }
+        </style>
+
+       <script>
+    $(document).ready(function () {
+        var uploader = $("#ImageFile").data("kendoUpload");
+
+        if (uploader) {
+            uploader.bind("success", function (e) {
+                if (e.operation === "upload" && e.response.success) {
+                    $("input[name='ImageUrl']").val(e.response.imageUrl); // ✅ bindon url-në
+                }
+            });
+        }
+    });
+</script>
+
+

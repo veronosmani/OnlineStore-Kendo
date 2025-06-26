@@ -6,18 +6,66 @@
     var categoryList = (IEnumerable<dynamic>)ViewBag.CategoryList;
 }
 
+
+
+<script>
+        function getEmpty(URL) {
+        return jQuery.ajax({
+            url: URL,
+            type: "GET",
+            cache: false,
+            statusCode: {
+                401: function () {
+                    redirectToLogin(urlLogin);
+                }
+            },
+            complete: function () {
+                $("#preloader").fadeOut('fast');
+            },
+            error: function () {
+                $("#preloader").fadeOut('fast');
+            }
+        });
+
+    }
+
+
+
+    function addNewProduct() {
+        getEmpty('@Url.Action("AddProcuduct", "Product")').done(function (response) {
+            var window = $("#window").data("kendoWindow");
+            window.content(response).open();
+        });
+    }
+</script>
+
+@(Html.Kendo().Window()
+    .Name("window")
+    .Content(@<text> </text>)
+    .Draggable()
+    .Resizable()
+    .Position(p => p.Top("10%").Left("10%"))
+    .Width("80%")
+    .Visible(false)
+    .Modal(true)
+    .Actions(actions => actions.Close())
+)
+
+
 <div class="text-center">
     <h1 class="display-4">Products</h1>
 
     @(Html.Kendo().Grid<telerik.Models.Product>()
-        .Name("grid")
+        .Name("gridProduct")
         .Columns(columns =>
         {
             columns.Bound(p => p.ProductID).Hidden();
             columns.Bound(p => p.ProductName).Width(200);
-            columns.Bound(p => p.UnitPrice).Width(150);
+            columns.Bound(p => p.UnitPrice).Width(100);
             columns.Bound(p => p.UnitsInStock).Width(150);
-            columns.Bound(p => p.Discontinued).Width(120);
+            columns.Bound(p => p.Discontinued)
+            .Width(120)
+            .Hidden();
 
             // Show Category name in display mode
             columns.Bound(p => p.CategoryID)
@@ -27,18 +75,25 @@
             "#= getCategoryName(CategoryID) #"
             )
             .EditorTemplateName("DropDownEditor"); // Optional fallback
-
-            columns.Command(command => { command.Edit(); command.Destroy(); }).Width(250);
+            @* columns.Bound(p => p.ImageUrl)
+            .Width(100)
+            .Title("Upload Image");
+            .EditorTemplateName("ImageUrl"); *@
+            columns.Bound(p => p.ImageUrl)
+            .Title("Image")
+            .ClientTemplate("<img src='#= ImageUrl #' style='width:50px;height:50px;' />")
+            .Width(120);
+            columns.Command(command => { command.Edit(); command.Destroy(); }).Width(150);
         })
         .ToolBar(toolbar =>
         {
-            toolbar.Create();
+            toolbar.Custom().Text("Add").HtmlAttributes(new { @class = "w-15", onclick = "addNewProduct();" });
             toolbar.Custom().Text("<input type='text' id='searchBox' placeholder='SEARCH PRODUCT NAME' style='margin: 0; padding:0; width: 250px; border: 0; background-color:transparent; outline: none; color: rgba(68,84,105,0.87)' />");
             toolbar.Excel();
             toolbar.Pdf();
         })
 
-        .Editable(editable => editable.Mode(GridEditMode.InLine))
+        .Editable(editable => editable.Mode(GridEditMode.PopUp).TemplateName("Product"))
         .Pageable()
         .Sortable()
         .Filterable()
@@ -62,8 +117,8 @@
         .PageSize(10)
         .Model(model => model.Id(p => p.ProductID))
         .Read(read => read.Action("Grid_Read", "Product").Data("getSearchValue"))
-        .Create(create => create.Action("Grid_Create", "Product"))
-        .Update(update => update.Action("Grid_Update", "Product"))
+        .Create(create => create.Action("Grid_CreateOrUpdate", "Product"))  // use Grid_Save here
+        .Update(update => update.Action("Grid_CreateOrUpdate", "Product"))  // and here too
         .Destroy(delete => delete.Action("Grid_Destroy", "Product"))
         )
         )
@@ -77,18 +132,6 @@
         return category ? category.CategoryName : '';
     }
 
-    function onEdit(e) {
-        var input = e.container.find("input[name='CategoryID']");
-        if (input.length) {
-            input.kendoDropDownList({
-                dataTextField: "CategoryName",
-                dataValueField: "CategoryID",
-                dataSource: categories,
-                optionLabel: "Select category..."
-            });
-        }
-    }
-
     function getSearchValue() {
         return {
             searchTerm: $("#searchBox").val()
@@ -96,7 +139,7 @@
     }
 
     function applySearch() {
-        var grid = $("#grid").data("kendoGrid");
+        var grid = $("#gridProduct").data("kendoGrid");
         grid.dataSource.read();
     }
 
@@ -129,3 +172,30 @@
         justify-content: center;
     }
 </style>
+<script>
+    function onEdit(e) {
+        e.container.find("form").attr("enctype", "multipart/form-data");
+
+        // KENDO DROPDOWN PER CATEGORY
+        var input = e.container.find("input[name='CategoryID']");
+        if (input.length) {
+            input.kendoDropDownList({
+                dataTextField: "CategoryName",
+                dataValueField: "CategoryID",
+                dataSource: categories,
+                optionLabel: "Select category..."
+            });
+        }
+
+        // BIND KENDO UPLOAD PER IMAGEFILE
+        var uploader = e.container.find("#ImageFile").data("kendoUpload");
+        if (uploader) {
+            uploader.bind("success", function (e) {
+                if (e.operation === "upload" && e.response.success) {
+                   e.container.find("input[name='ImageUrl']").val(ev.response.imageUrl);
+
+                }
+            });
+        }
+    }
+</script>

@@ -1,0 +1,48 @@
+﻿@model IEnumerable<telerik.Models.ProductSalesViewModel>
+
+@{
+    ViewBag.Title = "Product Sales Summary";
+}
+
+<h2>Product Sales Summary</h2>
+
+@if (Model.Any())
+{
+    <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Product</th>
+                <th>Units In Stock</th>
+                <th>Units Sold</th>
+                <th>Stock Left</th>
+                <th>Revenue (€)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.ProductName</td>
+                    <td>@item.UnitsInStock</td>
+                    <td>@item.UnitsSold</td>
+                    <td style="color:@(item.StockLeft < 5 ? "red" : "inherit")">
+                        @item.StockLeft
+                    </td>
+                    <td>@item.Revenue.ToString("F2")</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr style="font-weight: bold;">
+                <td colspan="4" style="text-align:right;">Total Revenue:</td>
+                <td>@ViewBag.TotalRevenue.ToString("F2") €</td>
+            </tr>
+        </tfoot>
+    </table>
+}
+else
+{
+    <div class="alert alert-info">
+        No product sales available.
+    </div>
+}

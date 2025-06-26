@@ -2,35 +2,40 @@
 using Kendo.Mvc.UI;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using telerik.Data;
 using telerik.Models;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 
 namespace telerik.Controllers
 {
     public class ProductController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-        public ProductController(ApplicationDbContext context)
+        public ProductController(ApplicationDbContext context, IWebHostEnvironment environment)
         {
             _context = context;
+            _environment = environment;
         }
 
         public IActionResult Index()
         {
             return View();
         }
+
         public IActionResult Shop()
         {
-            var products = _context.Products
-                .Include(p => p.Category)
-                .ToList();
-
+            var products = _context.Products.Include(p => p.Category).ToList();
             ViewBag.CategoryList = _context.Categories.ToList();
-
-            return View(products);  // Pass products as model
+            return View(products);
         }
+
         public IActionResult Order()
         {
             return View();
@@ -38,7 +43,6 @@ namespace telerik.Controllers
 
         public IActionResult Stock()
         {
-
             ViewBag.CategoryList = _context.Categories
                 .Select(c => new
                 {
@@ -48,6 +52,7 @@ namespace telerik.Controllers
                 .ToList();
             return View();
         }
+
         public JsonResult Grid_Read([DataSourceRequest] DataSourceRequest request, string searchTerm)
         {
             var query = _context.Products.Include(p => p.Category).AsQueryable();
@@ -66,62 +71,94 @@ namespace telerik.Controllers
                 p.Discontinued,
                 p.UnitsOnOrder,
                 p.CategoryID,
-                CategoryName = p.Category.CategoryName
+                CategoryName = p.Category.CategoryName,
+                p.ImageUrl
             });
 
             return Json(result.ToDataSourceResult(request));
         }
 
         [HttpPost]
-        public JsonResult Grid_Create([DataSourceRequest] DataSourceRequest request, Product productVM)
+        public async Task<JsonResult> Grid_CreateOrUpdate([DataSourceRequest] DataSourceRequest request, Product productVM)
         {
             if (ModelState.IsValid)
             {
-                var product = new Product
+                Product product;
+
+                if (productVM.ProductID == 0)
                 {
-                    ProductName = productVM.ProductName,
-                    UnitPrice = productVM.UnitPrice,
-                    UnitsInStock = productVM.UnitsInStock,
-                    Discontinued = productVM.Discontinued,
-                    UnitsOnOrder = productVM.UnitsOnOrder,
-                    CategoryID = productVM.CategoryID  // ✅ this is essential
-                };
+                    product = new Product
+                    {
+                        ProductName = productVM.ProductName,
+                        UnitPrice = productVM.UnitPrice,
+                        UnitsInStock = productVM.UnitsInStock,
+                        Discontinued = productVM.Discontinued,
+                        UnitsOnOrder = productVM.UnitsOnOrder,
+                        CategoryID = productVM.CategoryID,
+                        ImageUrl = productVM.ImageUrl
+                    };
 
-                _context.Products.Add(product);
-                _context.SaveChanges();
+                    _context.Products.Add(product);
+                }
+                else
+                {
+                    product = await _context.Products.FindAsync(productVM.ProductID);
+                    if (product == null) return Json(new[] { productVM }.ToDataSourceResult(request, ModelState));
 
-             
+                    product.ProductName = productVM.ProductName;
+                    product.UnitPrice = productVM.UnitPrice;
+                    product.UnitsInStock = productVM.UnitsInStock;
+                    product.Discontinued = productVM.Discontinued;
+                    product.UnitsOnOrder = productVM.UnitsOnOrder;
+                    product.CategoryID = productVM.CategoryID;
+
+                    if (!string.IsNullOrEmpty(productVM.ImageUrl))
+                        product.ImageUrl = productVM.ImageUrl;
+
+                    _context.Products.Update(product);
+                }
+
+                await _context.SaveChangesAsync();
+
+                productVM.ProductID = product.ProductID;
+                productVM.ImageUrl = product.ImageUrl;
             }
 
             return Json(new[] { productVM }.ToDataSourceResult(request, ModelState));
         }
 
 
-        [HttpPost]
-        public JsonResult Grid_Update([DataSourceRequest] DataSourceRequest request, Product productVM)
+        private string SanitizeFileName(string input)
         {
-            if (ModelState.IsValid)
+            foreach (char c in System.IO.Path.GetInvalidFileNameChars())
             {
-                var product = _context.Products.FirstOrDefault(p => p.ProductID == productVM.ProductID);
-                if (product != null)
-                {
-                    product.ProductName = productVM.ProductName;
-                    product.UnitPrice = productVM.UnitPrice;
-                    product.UnitsInStock = productVM.UnitsInStock;
-                    product.Discontinued = productVM.Discontinued;
-                    product.UnitsOnOrder = productVM.UnitsOnOrder;
-                    product.CategoryID = productVM.CategoryID; 
+                input = input.Replace(c, '_');
+            }
+            return input.Replace(" ", "_").ToLowerInvariant();
+        }
 
-                    _context.Products.Update(product);
-                    _context.SaveChanges();
+        [HttpPost]
+        public async Task<IActionResult> UploadImage(IFormFile ImageFile)
+        {
+            if (ImageFile == null || ImageFile.Length == 0)
+                return Json(new { success = false, message = "No file uploaded." });
 
-                    // Optional: update returned CategoryName
-                    productVM.CategoryName = _context.Categories
-                        .FirstOrDefault(c => c.CategoryID == product.CategoryID)?.CategoryName;
-                }
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "product-image");
+
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = Guid.NewGuid() + Path.GetExtension(ImageFile.FileName);
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await ImageFile.CopyToAsync(stream);
             }
 
-            return Json(new[] { productVM }.ToDataSourceResult(request, ModelState));
+            var imageUrl = "/product-image/" + fileName;
+
+            return Json(new { success = true, imageUrl });
         }
 
 
@@ -141,7 +178,6 @@ namespace telerik.Controllers
             return Json(new[] { productVM }.ToDataSourceResult(request, ModelState));
         }
 
-        // New action to get categories for dropdown
         public JsonResult GetCategories()
         {
             var categories = _context.Categories
@@ -149,6 +185,22 @@ namespace telerik.Controllers
                 .ToList();
 
             return Json(categories);
+        }
+
+
+        public IActionResult AddProcuduct()
+        {
+
+            ViewBag.CategoryList = _context.Categories
+               .Select(c => new
+               {
+                   CategoryID = c.CategoryID,
+                   CategoryName = c.CategoryName
+               })
+               .ToList();
+
+            var model = new Product();
+            return View(model);
         }
     }
 }
