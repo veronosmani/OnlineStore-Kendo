@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using telerik.Data;
 using telerik.Models;
 
@@ -9,10 +12,12 @@ namespace telerik.Controllers
     public class OrderController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        public OrderController(ApplicationDbContext context)
+        public OrderController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         [HttpGet]
@@ -32,11 +37,9 @@ namespace telerik.Controllers
             return View(model);
         }
 
-        // POST: /Order/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        
-        public IActionResult Create(OrderViewModel model)
+        public async Task<IActionResult> Create(OrderViewModel model)
         {
             if (!ModelState.IsValid)
                 return View(model);
@@ -50,7 +53,6 @@ namespace telerik.Controllers
                     return View(model);
                 }
 
-                // Calculate total quantity already sold
                 int totalSold = _context.Sales
                     .Where(s => s.ProductId == model.ProductId)
                     .Sum(s => (int?)s.Quantity) ?? 0;
@@ -61,16 +63,17 @@ namespace telerik.Controllers
                     return View(model);
                 }
 
-                // Create Order
+                string userId = _userManager.GetUserId(User);
+
                 var order = new Order
                 {
                     OrderDate = DateTime.Now,
-                    CustomerName = model.FullName
+                    CustomerName = model.FullName,
+                    UserId = userId
                 };
                 _context.Orders.Add(order);
-                _context.SaveChanges();
+                await _context.SaveChangesAsync();
 
-                // Add order detail
                 var orderDetail = new OrderDetail
                 {
                     OrderId = order.OrderId,
@@ -80,7 +83,6 @@ namespace telerik.Controllers
                 };
                 _context.OrderDetails.Add(orderDetail);
 
-                // Add sale record
                 var sale = new Sale
                 {
                     ProductId = model.ProductId,
@@ -89,7 +91,7 @@ namespace telerik.Controllers
                 };
                 _context.Sales.Add(sale);
 
-                _context.SaveChanges();
+                await _context.SaveChangesAsync();
 
                 TempData["SuccessMessage"] = "Order placed successfully!";
                 return RedirectToAction("Shop", "Product");
@@ -100,7 +102,5 @@ namespace telerik.Controllers
                 return View(model);
             }
         }
-
-
     }
 }

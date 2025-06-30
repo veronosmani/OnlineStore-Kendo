@@ -1,90 +1,54 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
+using telerik.Models;
 
-namespace YourNamespace.Controllers
+namespace telerik.Controllers
 {
+    [Authorize]
     public class AccountController : Controller
     {
         private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly SignInManager<IdentityUser> _signInManager;
 
         public AccountController(
             UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager,
-            RoleManager<IdentityRole> roleManager)
+            RoleManager<IdentityRole> roleManager,
+            SignInManager<IdentityUser> signInManager)
         {
             _userManager = userManager;
-            _signInManager = signInManager;
             _roleManager = roleManager;
+            _signInManager = signInManager;
         }
 
-        private async Task EnsureRolesExistAsync()
+        // Admin-only: View all users
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Users()
         {
-            var roles = new[] { "Admin", "Customer" };
+            var users = _userManager.Users.ToList();
+            return View(users);
+        }
 
-            foreach (var role in roles)
+        // Admin-only: Promote a user to Admin
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<IActionResult> PromoteToAdmin(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user != null)
             {
-                if (!await _roleManager.RoleExistsAsync(role))
+                if (!await _userManager.IsInRoleAsync(user, "Admin"))
                 {
-                    await _roleManager.CreateAsync(new IdentityRole(role));
+                    await _userManager.AddToRoleAsync(user, "Admin");
                 }
             }
+            return RedirectToAction("Users");
         }
 
-        [HttpGet]
-        public IActionResult Register()
-        {
-            return View();
-        }
-
+        // Logout (optional if you're already using scaffolded logout)
         [HttpPost]
-        public async Task<IActionResult> Register(string email, string password)
-        {
-            await EnsureRolesExistAsync();
-
-            var user = new IdentityUser { UserName = email, Email = email };
-            var result = await _userManager.CreateAsync(user, password);
-
-            if (result.Succeeded)
-            {
-                // Assign "Customer" role
-                await _userManager.AddToRoleAsync(user, "Customer");
-
-                await _signInManager.SignInAsync(user, isPersistent: false);
-                return RedirectToAction("Index", "Home");
-            }
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError("", error.Description);
-            }
-
-            return View();
-        }
-
-        [HttpGet]
-        public IActionResult Login()
-        {
-            return View();
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> Login(string email, string password)
-        {
-            var result = await _signInManager.PasswordSignInAsync(email, password, false, false);
-
-            if (result.Succeeded)
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            ModelState.AddModelError("", "Invalid login attempt.");
-            return View();
-        }
-
-        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();

@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using telerik.Data;
 using telerik.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace telerik.Controllers
 {
@@ -13,6 +15,7 @@ namespace telerik.Controllers
         {
             _context = context;
         }
+        [Authorize(Roles = "Admin")]
 
         public IActionResult ProductSalesSummary()
         {

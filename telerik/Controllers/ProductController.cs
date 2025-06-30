@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using telerik.Data;
+using Microsoft.AspNetCore.Authorization;
 using telerik.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -41,6 +42,7 @@ namespace telerik.Controllers
             return View();
         }
 
+        [Authorize(Roles = "Admin")]
         public IActionResult Stock()
         {
             ViewBag.CategoryList = _context.Categories

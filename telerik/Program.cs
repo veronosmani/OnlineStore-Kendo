@@ -26,6 +26,7 @@ namespace telerik
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
+
             builder.Services.AddRazorPages();
 
             var app = builder.Build();
