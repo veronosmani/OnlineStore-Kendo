@@ -13,12 +13,6 @@ namespace telerik.Controllers
         {
             _logger = logger;
         }
-
-        public IActionResult Index()
-        {
-            return View(); // Can show a landing or dashboard page
-        }
-
         public IActionResult Privacy()
         {
             return View();

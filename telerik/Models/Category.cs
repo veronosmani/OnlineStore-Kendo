@@ -8,6 +8,7 @@ namespace telerik.Models
     public class Category
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int CategoryID { get; set; }
 
         [Required]

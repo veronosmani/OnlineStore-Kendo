@@ -30,11 +30,17 @@ namespace telerik.Controllers
             return View();
         }
 
-        public IActionResult Shop()
+        public IActionResult Shop(int page = 1)
         {
+            int pageSize = 8;
             var products = _context.Products.Include(p => p.Category).ToList();
+            var pagedProducts = products.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            ViewBag.TotalPages = (int)Math.Ceiling((double)products.Count / pageSize);
+            ViewBag.CurrentPage = page;
             ViewBag.CategoryList = _context.Categories.ToList();
-            return View(products);
+
+            return View(pagedProducts);
         }
 
         public IActionResult Order()

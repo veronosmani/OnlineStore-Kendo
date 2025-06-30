@@ -1,6 +1,11 @@
 ﻿@model IEnumerable<telerik.Models.Product>
 @using telerik.Models
 
+@{
+    var totalPages = ViewBag.TotalPages as int? ?? 1;
+    var currentPage = ViewBag.CurrentPage as int? ?? 1;
+}
+
 <h1 style="text-align:center;">Shop</h1>
 <div class="order">
 
@@ -19,7 +24,8 @@
             </div>
 }
 
-    <div class="order-cards">
+    <div class="order-cards @(Model.Count() == 1 ? "single-product" : "")">
+
         @foreach (var product in Model)
         {
             <div class="order-card" data-categoryid="@product.CategoryID">
@@ -34,7 +40,7 @@
                             <p><strong>Price:</strong> @product.UnitPrice.ToString() €</p>
                             <p><strong>Category:</strong> @product.Category?.CategoryName</p>
                             <p><strong>Units On Stock:</strong> @product.UnitsInStock</p>
-                            <p><strong>Discontinued:</strong> @(product.Discontinued ? "Yes" : "No")</p>
+                            <p><strong>Limited:</strong> @(product.Discontinued ? "Yes" : "No")</p>
                             <div class="order-card-layout-buttons">
                                 <a class="order-card-layout-addToCart" asp-controller="Order" asp-action="Create" asp-route-productId="@product.ProductID">
                                     <p class="order-text">Order</p>
@@ -47,7 +53,14 @@
             </div>
         }
     </div>
-
+    <div class="pagination">
+        @for (int i = 1; i <= totalPages; i++)
+        {
+            <a href="@Url.Action("Shop", new { page = i })" class="@(i == currentPage ? "active" : "")">
+                @i
+            </a>
+        }
+    </div>
 
 </div>
 
@@ -183,6 +196,33 @@
     transition: background-color 0.3s ease;
     width: 100%;
     }
+
+    .order-cards.single-product {
+        justify-content: flex-start;
+        padding-left: 50px;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        margin: 40px 0 60px;
+        gap: 10px;
+    }
+
+        .pagination a {
+            padding: 8px 14px;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+            .pagination a.active {
+                background-color: #007bff;
+                color: white;
+            }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>

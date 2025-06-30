@@ -1,0 +1,43 @@
+﻿@using Kendo.Mvc.UI
+@model IEnumerable<telerik.Models.Category>
+
+@{
+    ViewData["Title"] = "Manage Categories";
+}
+
+<h2>Categories</h2>
+
+@(Html.Kendo().Grid<telerik.Models.Category>()
+    .Name("categoriesGrid")
+    .Columns(columns =>
+    {
+        columns.Bound(c => c.CategoryID)
+               .Title("ID")
+               .Width(100);
+
+        columns.Bound(c => c.CategoryName).Title("Name");
+
+        columns.Command(command =>
+        {
+            command.Edit();
+            command.Destroy();
+        }).Title("Actions").Width(200);
+    })
+    .ToolBar(toolbar => toolbar.Create())
+    .Editable(editable => editable.Mode(GridEditMode.InLine))
+    .Pageable()
+    .Sortable()
+    .Scrollable()
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Model(model =>
+        {
+            model.Id(c => c.CategoryID);
+            model.Field(c => c.CategoryID).Editable(false); // <- important
+        })
+        .Read(read => read.Action("Categories_Read", "Category"))
+        .Create(create => create.Action("Categories_Create", "Category"))
+        .Update(update => update.Action("Categories_Update", "Category"))
+        .Destroy(delete => delete.Action("Categories_Destroy", "Category"))
+    )
+)
