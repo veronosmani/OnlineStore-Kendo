@@ -31,7 +31,8 @@ namespace telerik.Controllers
             {
                 ProductId = product.ProductID,
                 ProductName = product.ProductName,
-                UnitPrice = product.UnitPrice
+                UnitPrice = product.UnitPrice,
+                ImageUrl = product.ImageUrl 
             };
 
             return View(model);
@@ -90,6 +91,10 @@ namespace telerik.Controllers
                     DateSold = DateTime.Now
                 };
                 _context.Sales.Add(sale);
+
+                // ✅ Update UnitsOnOrder
+                product.UnitsOnOrder += model.Quantity;
+                _context.Products.Update(product);
 
                 await _context.SaveChangesAsync();
 

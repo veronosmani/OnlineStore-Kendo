@@ -9,6 +9,7 @@ namespace telerik.Models
         public string ProductName { get; set; }
 
         public decimal UnitPrice { get; set; }
+        public string ImageUrl { get; set; } 
 
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")]
@@ -26,5 +27,6 @@ namespace telerik.Models
 
         [Required(ErrorMessage = "Payment form is required")]
         public string PaymentForm { get; set; }  // Card or Cash
+
     }
 }

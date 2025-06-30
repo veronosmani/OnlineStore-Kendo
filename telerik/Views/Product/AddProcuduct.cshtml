@@ -19,7 +19,7 @@
     }
 </script>
 
-<form method="post" id="productForm">
+<form method="post" id="productForm" class="productForm">
 
 <div class="create-container">
     @Html.HiddenFor(m => m.ProductID)
@@ -73,7 +73,7 @@
     <div class="k-edit-label">
         <label for="ImageFile" style="margin-bottom: 10px; font-size: 16px">Upload Image</label>
     </div>
-    <div class="k-edit-field">
+    <div class="k-edit-field" style="width: 40px">
 
         @Html.HiddenFor(m => m.ImageUrl)
 
@@ -92,7 +92,7 @@
 
 </div>
 
-    <button type="submit" onclick="submitForm(event)">Submit</button>
+    <button type="submit" onclick="submitForm(event)" class="submit-button">Submit</button>
 
 
 </form>
@@ -146,6 +146,16 @@
 
 </script>
 
-
-
-
+<style>
+    .productForm {
+        width:450px;
+        height: 550px;
+    }
+    .submit-button {
+        background-color: white;
+        width: 100px;
+        height: 40px;
+        border: 1px solid grey;
+        border-radius:10px;
+    }
+</style>
