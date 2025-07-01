@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Place Order";
+    var discard = TempData["SuccessMessage"];
 }
 
 <style>
@@ -147,7 +148,24 @@
             }
 
             quantityInput.addEventListener('input', updateTotal);
-            updateTotal(); // Initial load
+            updateTotal();
         });
     </script>
-    }
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+                    @if (TempData["ErrorMessage"] != null)
+        {
+                <text>
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: '@TempData["ErrorMessage"]',
+                        confirmButtonColor: '#dc3545'
+                    });
+                </text>
+        }
+
+        });
+    </script>
+}

@@ -33,8 +33,9 @@
         .Model(model =>
         {
             model.Id(c => c.CategoryID);
-            model.Field(c => c.CategoryID).Editable(false); // <- important
+            model.Field(c => c.CategoryID).Editable(false);
         })
+        .Sort(sort => sort.Add("CategoryID").Ascending())
         .Read(read => read.Action("Categories_Read", "Category"))
         .Create(create => create.Action("Categories_Create", "Category"))
         .Update(update => update.Action("Categories_Update", "Category"))
