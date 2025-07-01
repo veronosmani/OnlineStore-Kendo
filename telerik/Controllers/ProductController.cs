@@ -30,18 +30,31 @@ namespace telerik.Controllers
             return View();
         }
 
-        public IActionResult Shop(int page = 1)
+        public IActionResult Shop(int page = 1, List<int> categoryIds = null)
         {
             int pageSize = 8;
-            var products = _context.Products.Include(p => p.Category).ToList();
-            var pagedProducts = products.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
-            ViewBag.TotalPages = (int)Math.Ceiling((double)products.Count / pageSize);
+            var query = _context.Products.Include(p => p.Category).AsQueryable();
+
+            if (categoryIds != null && categoryIds.Any())
+            {
+                query = query.Where(p => categoryIds.Contains(p.CategoryID));
+            }
+
+            var totalProducts = query.Count();
+            var pagedProducts = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            ViewBag.TotalPages = (int)Math.Ceiling((double)totalProducts / pageSize);
             ViewBag.CurrentPage = page;
             ViewBag.CategoryList = _context.Categories.ToList();
+            ViewBag.SelectedCategories = categoryIds;
 
             return View(pagedProducts);
         }
+
 
         public IActionResult Order()
         {

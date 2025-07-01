@@ -4,28 +4,43 @@
 @{
     var totalPages = ViewBag.TotalPages as int? ?? 1;
     var currentPage = ViewBag.CurrentPage as int? ?? 1;
+    var categories = (List<Category>)ViewBag.CategoryList;
+    var selectedCategories = ViewBag.SelectedCategories as List<int> ?? new List<int>();
+
+    string categoryQuery = selectedCategories.Any()
+        ? string.Join("&", selectedCategories.Select(id => $"categoryIds={id}"))
+        : "";
 }
 
 <h1 style="text-align:center;">Shop</h1>
 <div class="order">
 
-            
-@{
-    var categories = (List<Category>)ViewBag.CategoryList;
-}              
-        @{
-            <div class="category-filters" style="text-align:center; margin-bottom: 20px;">
-                @foreach (var category in categories)
+    <div class="category-filters" style="text-align:center; margin-bottom: 20px;">
+        <form id="filterForm" method="get" action="/Product/Shop">
+            <input type="hidden" name="page" value="1" />
+            <div id="categoryInputs">
+                @foreach (var id in selectedCategories)
                 {
-                    <button class="category-btn" data-categoryid="@category.CategoryID">
-                        @category.CategoryName
-                    </button>
+                    <input type="hidden" name="categoryIds" value="@id" />
                 }
             </div>
-}
+        </form>
+
+        @foreach (var category in categories)
+        {
+            var isSelected = selectedCategories.Contains(category.CategoryID);
+            var buttonStyle = isSelected
+            ? "background-color: #007bff; color: white;"
+            : "background-color: white; color: #007bff;";
+            <button class="category-btn"
+                    data-categoryid="@category.CategoryID"
+                    style="@buttonStyle">
+                @category.CategoryName
+            </button>
+        }
+    </div>
 
     <div class="order-cards @(Model.Count() == 1 ? "single-product" : "")">
-
         @foreach (var product in Model)
         {
             <div class="order-card" data-categoryid="@product.CategoryID">
@@ -42,10 +57,12 @@
                             <p><strong>Units On Stock:</strong> @product.UnitsInStock</p>
                             <p><strong>Limited:</strong> @(product.Discontinued ? "Yes" : "No")</p>
                             <div class="order-card-layout-buttons">
-                                <a class="order-card-layout-addToCart" asp-controller="Order" asp-action="Create" asp-route-productId="@product.ProductID">
+                                <a class="order-card-layout-addToCart"
+                                   asp-controller="Order"
+                                   asp-action="Create"
+                                   asp-route-productId="@product.ProductID">
                                     <p class="order-text">Order</p>
                                 </a>
-
                             </div>
                         </div>
                     </div>
@@ -53,71 +70,72 @@
             </div>
         }
     </div>
+
     <div class="pagination">
         @for (int i = 1; i <= totalPages; i++)
         {
-            <a href="@Url.Action("Shop", new { page = i })" class="@(i == currentPage ? "active" : "")">
-                @i
-            </a>
+            var url = Url.Action("Shop", "Product", new { page = i }) +
+            (string.IsNullOrEmpty(categoryQuery) ? "" : "&" + categoryQuery);
+            <a href="@url" class="@(i == currentPage ? "active" : "")">@i</a>
         }
     </div>
 
 </div>
 
+<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    $(function(){
+    $(function () {
         let selectedCategories = new Set();
 
-        $(".category-btn").click(function(){
+        // Load selected from initial page
+        @foreach (var catId in selectedCategories)
+        {
+                <text>selectedCategories.add(@catId);</text>
+        }
+
+        $(".category-btn").click(function (e) {
+            e.preventDefault();
             const categoryId = $(this).data("categoryid");
 
-            if(selectedCategories.has(categoryId)){
+            if (selectedCategories.has(categoryId)) {
                 selectedCategories.delete(categoryId);
-                $(this).css({"background-color": "white", "color": "#007bff"});
+                $(this).css({ "background-color": "white", "color": "#007bff" });
             } else {
                 selectedCategories.add(categoryId);
-                $(this).css({"background-color": "#007bff", "color": "white"});
+                $(this).css({ "background-color": "#007bff", "color": "white" });
             }
 
-            filterProducts();
-        });
+            const container = $("#categoryInputs");
+            container.empty();
 
-        function filterProducts(){
-            if(selectedCategories.size === 0){
-                $(".order-card").show();
-                return;
-            }
-
-            $(".order-card").each(function(){
-                const prodCategoryId = $(this).data("categoryid");
-                if(selectedCategories.has(prodCategoryId)){
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
+            selectedCategories.forEach(id => {
+                container.append(`<input type="hidden" name="categoryIds" value="${id}" />`);
             });
-        }
+
+            $("#filterForm").submit();
+        });
     });
 </script>
 
-
+<!-- Styles -->
 <style>
     .category-filters {
-        margin-top:20px;
+        margin-top: 20px;
     }
+
     .category-btn {
-        margin: 0 8px 8px 0; 
-        padding: 8px 12px; 
+        margin: 0 8px 8px 0;
+        padding: 8px 12px;
         border-radius: 6px;
         color: #007bff;
-        border: 1px solid #007bff; 
-        background-color: white; 
+        border: 1px solid #007bff;
         cursor: pointer;
     }
+
     .order-cards {
         display: flex;
-        justify-content:center;
+        justify-content: center;
         flex-wrap: wrap;
         padding: 30px 0;
         gap: 50px;
@@ -126,7 +144,7 @@
     .order-card {
         width: 250px;
         height: 400px;
-        perspective: 1000px; 
+        perspective: 1000px;
     }
 
     .order-card-inner {
@@ -183,18 +201,17 @@
     }
 
     .order-text {
-
-    text-align: center;
-    text-decoration: none !important;
-    margin-top: auto;
-    padding: 10px 0px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    width: 100%;
+        text-align: center;
+        text-decoration: none !important;
+        margin-top: auto;
+        padding: 10px 0px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        width: 100%;
     }
 
     .order-cards.single-product {
@@ -222,32 +239,4 @@
                 background-color: #007bff;
                 color: white;
             }
-
 </style>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    $(document).ready(function () {
-        @if (TempData["SuccessMessage"] != null)
-        {
-                <text>
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: '@TempData["SuccessMessage"]',
-                        confirmButtonColor: '#007bff'
-                    });
-                </text>
-        }
-        else if (TempData["ErrorMessage"] != null)
-        {
-                <text>
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: '@TempData["ErrorMessage"]',
-                        confirmButtonColor: '#dc3545'
-                    });
-                </text>
-        }
-    });
-</script>
