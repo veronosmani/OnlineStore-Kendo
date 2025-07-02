@@ -25,12 +25,7 @@ namespace telerik.Controllers
 
         public IActionResult Categories_Read([DataSourceRequest] DataSourceRequest request)
         {
-            var data = _context.Categories.Select(c => new
-            {
-                c.CategoryID,
-                c.CategoryName
-            });
-
+            var data = _context.Categories; 
             return Json(data.ToDataSourceResult(request));
         }
 

@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel;
+using System.Text.Json.Serialization;
 
 namespace telerik.Models
 {
@@ -15,7 +17,16 @@ namespace telerik.Models
         [MaxLength(100)]
         public string CategoryName { get; set; }
 
-        // Navigation property to products
+        public int? ParentCategoryID { get; set; }
+
+        [ForeignKey("ParentCategoryID")]
+        [InverseProperty("SubCategories")]
+        [JsonIgnore]
+        public Category? ParentCategory { get; set; }
+
+        [InverseProperty("ParentCategory")] 
+        public ICollection<Category> SubCategories { get; set; } = new List<Category>();
+
         public ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }

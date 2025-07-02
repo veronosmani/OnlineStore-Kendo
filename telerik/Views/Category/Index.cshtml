@@ -2,43 +2,88 @@
 @model IEnumerable<telerik.Models.Category>
 
 @{
-    ViewData["Title"] = "Manage Categories";
+    ViewData["Title"] = "Manage Categories Hierarchically";
 }
 
 <h2>Categories</h2>
 
-@(Html.Kendo().Grid<telerik.Models.Category>()
-    .Name("categoriesGrid")
+@(Html.Kendo().TreeList<telerik.Models.Category>()
+    .Name("categoriesTreeList")
     .Columns(columns =>
     {
-        columns.Bound(c => c.CategoryID)
-               .Title("ID")
-               .Width(100);
-
-        columns.Bound(c => c.CategoryName).Title("Name");
-
-        columns.Command(command =>
+        columns.Add().Field(c => c.CategoryID).Hidden();
+        columns.Add().Field(c => c.CategoryName).Title("Name").Width(250);
+        columns.Add().Command(command =>
         {
             command.Edit();
             command.Destroy();
+            command.Custom().Name("addchild").Text("Add Sub Category");
         }).Title("Actions").Width(200);
     })
-    .ToolBar(toolbar => toolbar.Create())
-    .Editable(editable => editable.Mode(GridEditMode.InLine))
-    .Pageable()
-    .Sortable()
-    .Scrollable()
+    .Toolbar(toolbar => toolbar.Create().Text("Add Category"))
+    .Editable(editable => editable.Mode(TreeListEditMode.InLine))
     .DataSource(dataSource => dataSource
-        .Ajax()
         .Model(model =>
         {
             model.Id(c => c.CategoryID);
-            model.Field(c => c.CategoryID).Editable(false);
+            model.ParentId(c => c.ParentCategoryID).Nullable(true);
         })
-        .Sort(sort => sort.Add("CategoryID").Ascending())
         .Read(read => read.Action("Categories_Read", "Category"))
         .Create(create => create.Action("Categories_Create", "Category"))
         .Update(update => update.Action("Categories_Update", "Category"))
         .Destroy(delete => delete.Action("Categories_Destroy", "Category"))
     )
+    .Events(events => events.DataBound("onDataBound"))
 )
+
+<script>
+       function onDataBound() {
+        var treeList = $("#categoriesTreeList").data("kendoTreeList");
+        console.log("DataBound event fired, binding Add Child click.");
+
+        // Unbind to avoid duplicate handlers
+        $("#categoriesTreeList").off("click", "button[data-command='addchild']");
+
+        $("#categoriesTreeList").on("click", "button[data-command='addchild']", function(e) {
+            e.preventDefault();
+            console.log("Add Child button clicked.");
+
+            var tr = $(this).closest("tr");
+            var dataItem = treeList.dataItem(tr);
+            console.log("Parent category dataItem:", dataItem);
+
+            // Add new empty row first
+            treeList.addRow();
+
+            // After row appears, set parent and name
+            setTimeout(function() {
+                var editRow = treeList.tbody.find("tr.k-grid-edit-row");
+                var newModel = treeList.dataItem(editRow);
+                if (newModel) {
+                    newModel.set("ParentCategoryID", dataItem.CategoryID);
+                    newModel.set("CategoryName", "New Category");
+                    console.log("Set ParentCategoryID and default CategoryName on new row.");
+                } else {
+                    console.error("New model not found after addRow.");
+                }
+            }, 100);
+        });
+    }
+
+</script>
+<style>
+    .k-grid-toolbar {
+        display: flex;
+        justify-content: space-between;
+    }
+
+        .k-grid-toolbar .left-tools {
+            display: flex;
+            gap: 10px;
+        }
+
+        .k-grid-toolbar .right-tools {
+            display: flex;
+            gap: 10px;
+        }
+</style>

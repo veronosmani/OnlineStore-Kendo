@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 using telerik.Models;
 
 namespace telerik.Data
@@ -22,10 +23,25 @@ namespace telerik.Data
         {
             base.OnModelCreating(builder);
 
+            // Seed roles
             builder.Entity<IdentityRole>().HasData(
                 new IdentityRole { Name = "Admin", NormalizedName = "ADMIN" },
-                new IdentityRole { Name = "Customer", NormalizedName = "CUSTOMER" }  // changed User -> Customer for consistency
+                new IdentityRole { Name = "Customer", NormalizedName = "CUSTOMER" }
             );
+
+            builder.Entity<Category>()
+        .HasOne(c => c.ParentCategory)
+        .WithMany(c => c.SubCategories)  // specify the collection navigation property here
+        .HasForeignKey(c => c.ParentCategoryID)
+        .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Product>()
+                .HasOne(p => p.Category)
+                .WithMany(c => c.Products)
+                .HasForeignKey(p => p.CategoryID)
+                .OnDelete(DeleteBehavior.Restrict);
         }
+
+
     }
 }
