@@ -27,6 +27,7 @@
         {
             model.Id(c => c.CategoryID);
             model.ParentId(c => c.ParentCategoryID).Nullable(true);
+            model.Expanded(true);
         })
         .Read(read => read.Action("Categories_Read", "Category"))
         .Create(create => create.Action("Categories_Create", "Category"))
@@ -41,7 +42,6 @@
         var treeList = $("#categoriesTreeList").data("kendoTreeList");
         console.log("DataBound event fired, binding Add Child click.");
 
-        // Unbind to avoid duplicate handlers
         $("#categoriesTreeList").off("click", "button[data-command='addchild']");
 
         $("#categoriesTreeList").on("click", "button[data-command='addchild']", function(e) {
@@ -52,10 +52,8 @@
             var dataItem = treeList.dataItem(tr);
             console.log("Parent category dataItem:", dataItem);
 
-            // Add new empty row first
             treeList.addRow();
 
-            // After row appears, set parent and name
             setTimeout(function() {
                 var editRow = treeList.tbody.find("tr.k-grid-edit-row");
                 var newModel = treeList.dataItem(editRow);

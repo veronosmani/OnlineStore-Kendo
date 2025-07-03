@@ -1,0 +1,70 @@
+﻿@using Microsoft.AspNetCore.Identity
+@model IEnumerable<Microsoft.AspNetCore.Identity.IdentityUser>
+@inject UserManager<IdentityUser> UserManager
+
+@{
+    ViewData["Title"] = "Manage Users";
+    var currentUserId = UserManager.GetUserId(User);
+}
+
+<h2>Manage Users</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Roles</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model)
+        {
+            var isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
+            <tr>
+                <td>@user.Email</td>
+                <td>@(isAdmin ? "Admin" : "User")</td>
+                <td>
+                    <form asp-action="PromoteToAdmin" method="post" style="display:inline">
+                        <input type="hidden" name="userId" value="@user.Id" />
+                        @if (!isAdmin)
+                        {
+                            <button type="submit" class="btn btn-success btn-sm">Promote to Admin</button>
+                        }
+                    </form>
+
+                    <form asp-action="DemoteFromAdmin" method="post" style="display:inline">
+                        <input type="hidden" name="userId" value="@user.Id" />
+                        @if (isAdmin && user.Id != currentUserId)
+                        {
+                            <button type="submit" class="btn btn-danger btn-sm">Demote</button>
+                        }
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            @if (TempData["Notification"] != null)
+            {
+                    <text>
+                        Swal.fire({
+                            title: 'Success!',
+                            text: '@TempData["Notification"]',
+                            icon: 'success',
+                            showConfirmButton: false,
+                            timer: 2000,
+                            timerProgressBar: true,
+                            position: 'center'
+                        });
+                    </text>
+            }
+        });
+    </script>
+
+}

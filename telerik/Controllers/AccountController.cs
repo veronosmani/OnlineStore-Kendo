@@ -41,12 +41,34 @@ namespace telerik.Controllers
                 if (!await _userManager.IsInRoleAsync(user, "Admin"))
                 {
                     await _userManager.AddToRoleAsync(user, "Admin");
+                    TempData["Notification"] = $"User {user.Email} was promoted to Admin.";
+
                 }
             }
             return RedirectToAction("Users");
         }
 
-        // Logout (optional if you're already using scaffolded logout)
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        public async Task<IActionResult> DemoteFromAdmin(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            var currentUserId = _userManager.GetUserId(User);
+
+            if (user != null && user.Id != currentUserId)
+            {
+                if (await _userManager.IsInRoleAsync(user, "Admin"))
+                {
+                    await _userManager.RemoveFromRoleAsync(user, "Admin");
+                    TempData["Notification"] = $"User {user.Email} was demoted to User.";
+
+                }
+            }
+
+            return RedirectToAction("Users");
+        }
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
