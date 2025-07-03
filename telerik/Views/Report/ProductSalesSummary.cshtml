@@ -61,79 +61,115 @@
 </div>
 
 <br />
-<h2 class="mb-2">Stock Summary</h2>
+<h2 class="mb-2">Stock</h2>
 
-<div id="stockChart"></div>
+<div style="margin-bottom: 10px;">
+    <input id="productSearch" placeholder="Search product..." style="width: 300px; margin-right: 10px;" />
+    <button class="k-button k-primary" style="background-color:deepskyblue" id="exportPDF">Export PDF</button>
+</div>
 
-@section Scripts {
-    <script>
-        $(document).ready(function () {
-            var chartData = [
-                @foreach (var item in Model)
+<div style="overflow-x: auto;">
+    <div id="productChart" style="min-width: 1200px;"></div>
+</div>
+
+
+<script>
+    const allData = [
+        @foreach (var item in Model)
+        {
+                <text>
                 {
-                        <text>
-                        {
-                            product: "@item.ProductName",
-                            inStock: @item.UnitsInStock,
-                            sold: @item.UnitsSold,
-                            left: @item.StockLeft
-                        },
-                        </text>
-                }
-            ];
+                    name: "@item.ProductName",
+                    stock: @item.UnitsInStock,
+                    sold: @item.UnitsSold,
+                    left: @item.StockLeft
+                },
+                </text>
+        }
+    ];
 
-            $("#stockChart").kendoChart({
+       function renderChart(data) {
+        $("#productChart").kendoChart({
+            legend: {
+                position: "top",
+                labels: {
+                    font: "16px"
+                }
+            },
+            seriesDefaults: {
+                type: "column"
+            },
+            series: [
+                {
+                    name: "In Stock",
+                    stack: "Stock",
+                    data: data.map(p => p.stock),
+                    color: "deepskyblue"
+                },
+                {
+                    name: "Sold",
+                    stack: "Sales",
+                    data: data.map(p => p.sold),
+                    color: "purple"
+                },
+                {
+                    name: "Left in Stock",
+                    stack: "Sales",
+                    data: data.map(p => p.left),
+                    color: "red"
+                }
+            ],
+            categoryAxis: {
+                categories: data.map(p => p.name),
+                labels: {
+                    rotation: 0
+                },
+                majorGridLines: {
+                    visible: false
+                }
+            },
+            valueAxis: {
+                labels: {
+                    template: "#= value #"
+                },
                 title: {
-                    text: "Stock Overview"
-                },
-                legend: {
-                    position: "top"
-                },
-                seriesDefaults: {
-                    type: "bar",
-                    stack: true
-                },
-                series: [
-                    {
-                        name: "Units In Stock",
-                        field: "inStock",
-                        color: "#f3ac32"
-                    },
-                    {
-                        name: "Units Sold",
-                        field: "sold",
-                        color: "#6fbf73"
-                    },
-                    {
-                        name: "Stock Left",
-                        field: "left",
-                        color: "#4e73df"
-                    }
-                ],
-                dataSource: {
-                    data: chartData
-                },
-                categoryAxis: {
-                    field: "product",
-                    labels: {
-                        rotation: 0
-                    }
-                },
-                valueAxis: {
-                    min: 0,
-                    line: {
-                        visible: false
-                    },
-                    minorGridLines: {
-                        visible: true
-                    }
-                },
-                tooltip: {
-                    visible: true,
-                    template: "#= series.name #: #= value #"
+                    text: "Units"
                 }
-            });
+            },
+            tooltip: {
+                visible: true,
+                template: "#= series.name #: #= value #"
+            },
+            pdf: {
+                paperSize: "auto",
+                margin: 40,
+                landscape: true,
+                fileName: "Product_Stock_Chart.pdf"
+            }
         });
-    </script>
-}
+    }
 
+
+    $(document).ready(function () {
+        renderChart(allData);
+
+        $("#productSearch").kendoComboBox({
+            placeholder: "Search product...",
+            dataTextField: "name",
+            dataValueField: "name",
+            filter: "contains",
+            dataSource: allData,
+            change: function () {
+                const value = this.value();
+                const filtered = value
+                    ? allData.filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
+                    : allData;
+                renderChart(filtered);
+            }
+        });
+        $("#exportPDF").click(function () {
+            var chart = $("#productChart").data("kendoChart");
+            chart.saveAsPDF();
+        });
+    });
+</script>
