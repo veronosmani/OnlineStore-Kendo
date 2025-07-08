@@ -6,9 +6,15 @@
     var currentPage = ViewBag.CurrentPage as int? ?? 1;
     var categories = (List<Category>)ViewBag.CategoryList;
     var selectedCategories = ViewBag.SelectedCategories as List<int> ?? new List<int>();
+    var selectedSubcategories = ViewBag.SelectedSubcategories as List<int> ?? new List<int>();
 
-    string categoryQuery = selectedCategories.Any()
-        ? string.Join("&", selectedCategories.Select(id => $"categoryIds={id}"))
+    // Combine for query string: both categories and subcategories
+    List<int> allSelectedIds = new List<int>();
+    if (selectedCategories != null) allSelectedIds.AddRange(selectedCategories);
+    if (selectedSubcategories != null) allSelectedIds.AddRange(selectedSubcategories);
+
+    string categoryQuery = allSelectedIds.Any()
+        ? string.Join("&", allSelectedIds.Select(id => $"categoryIds={id}"))
         : "";
 }
 
@@ -18,26 +24,28 @@
     <div class="category-filters" style="text-align:center; margin-bottom: 20px;">
         <form id="filterForm" method="get" action="/Product/Shop">
             <input type="hidden" name="page" value="1" />
-            <div id="categoryInputs">
-                @foreach (var id in selectedCategories)
-                {
-                    <input type="hidden" name="categoryIds" value="@id" />
-                }
-            </div>
+            <div id="categoryInputs"></div>
         </form>
 
-        @foreach (var category in categories)
-        {
-            var isSelected = selectedCategories.Contains(category.CategoryID);
-            var buttonStyle = isSelected
-            ? "background-color: #007bff; color: white;"
-            : "background-color: white; color: #007bff;";
-            <button class="category-btn"
-                    data-categoryid="@category.CategoryID"
-                    style="@buttonStyle">
-                @category.CategoryName
-            </button>
-        }
+        <div id="category-buttons">
+            @foreach (var category in categories)
+            {
+                var isSelected = selectedCategories.Contains(category.CategoryID);
+                var catBtnStyle = isSelected
+                ? "background-color: #007bff; color: white;"
+                : "background-color: white; color: #007bff;";
+
+                <div class="category-wrapper" style="display: inline-block; position: relative;">
+                    <button type="button"
+                            class="category-btn"
+                            style="@catBtnStyle"
+                            data-categoryid="@category.CategoryID">
+                        @category.CategoryName
+                    </button>
+                </div>
+            }
+            <button type="button" id="clearFiltersBtn" class="clear-filter-btn">Clear Filters</button>
+        </div>
     </div>
 
     <div class="order-cards @(Model.Count() == 1 ? "single-product" : "")">
@@ -79,75 +87,207 @@
             <a href="@url" class="@(i == currentPage ? "active" : "")">@i</a>
         }
     </div>
-
 </div>
 
-<!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script>
     $(function () {
-        let selectedCategories = new Set();
+        const allSubCategories = @Html.Raw(Json.Serialize(ViewBag.AllSubCategories));
+        const selectedCategoryIds = new Set(@Html.Raw(Json.Serialize(selectedCategories ?? [])));
+        const selectedSubcategoryIds = new Set(@Html.Raw(Json.Serialize(selectedSubcategories ?? [])));
 
-        // Load selected from initial page
-        @foreach (var catId in selectedCategories)
-        {
-                <text>selectedCategories.add(@catId);</text>
+        function updateCategoryButtonStyles() {
+            $(".category-btn").each(function () {
+                const id = $(this).data("categoryid");
+                if (selectedCategoryIds.has(id)) {
+                    $(this).css({ "background-color": "#007bff", "color": "white" });
+                } else {
+                    $(this).css({ "background-color": "white", "color": "#007bff" });
+                }
+            });
         }
 
-        $(".category-btn").click(function (e) {
-            e.preventDefault();
-            const categoryId = $(this).data("categoryid");
+        function updateSubcategoryButtonStyles() {
+            $(".subcategory-dropdown .subcat-btn").each(function () {
+                const id = $(this).data("subcatid");
+                let numId = (typeof id === "string" && id.startsWith("parent-")) ? parseInt(id.split("-")[1]) : id;
+                if (selectedSubcategoryIds.has(numId)) {
+                    $(this).css({ "background-color": "#007bff", "color": "white" });
+                } else {
+                    $(this).css({ "background-color": "white", "color": "#007bff" });
+                }
+            });
+        }
 
-            if (selectedCategories.has(categoryId)) {
-                selectedCategories.delete(categoryId);
-                $(this).css({ "background-color": "white", "color": "#007bff" });
-            } else {
-                selectedCategories.add(categoryId);
-                $(this).css({ "background-color": "#007bff", "color": "white" });
+        function createDropdown(parentId) {
+            const wrapper = $(`button[data-categoryid=${parentId}]`).closest(".category-wrapper");
+            wrapper.find(".subcategory-dropdown").remove();
+
+            const subcats = allSubCategories.filter(sc => sc.parentID === parentId);
+            if (subcats.length === 0) {
+                // No subcats - select only parent category and submit
+                selectedCategoryIds.clear();
+                selectedSubcategoryIds.clear();
+                selectedCategoryIds.add(parentId);
+                submitForm();
+                return;
             }
 
+            let dropdownHtml = `<div class="subcategory-dropdown">`;
+
+            dropdownHtml += `<button class="subcat-btn" data-subcatid="parent-${parentId}">All</button>`;
+
+            subcats.forEach(sc => {
+                dropdownHtml += `<button class="subcat-btn" data-subcatid="${sc.categoryID}">${sc.categoryName}</button>`;
+            });
+
+            dropdownHtml += `<button class="apply-subcats-btn">Apply Filters</button>`;
+            dropdownHtml += `</div>`;
+            wrapper.append(dropdownHtml);
+
+            updateSubcategoryButtonStyles();
+        }
+
+        function submitForm() {
             const container = $("#categoryInputs");
             container.empty();
 
-            selectedCategories.forEach(id => {
-                container.append(`<input type="hidden" name="categoryIds" value="${id}" />`);
-            });
+            // If any subcategories selected, only submit subcategories
+            if (selectedSubcategoryIds.size > 0) {
+                selectedSubcategoryIds.forEach(id => {
+                    container.append(`<input type="hidden" name="categoryIds" value="${id}" />`);
+                });
+            } else {
+                // Else submit selected categories
+                selectedCategoryIds.forEach(id => {
+                    container.append(`<input type="hidden" name="categoryIds" value="${id}" />`);
+                });
+            }
 
+            $("#filterForm").submit();
+        }
+
+        $(document).on("click", ".category-btn", function () {
+            const parentId = $(this).data("categoryid");
+            const wrapper = $(this).closest(".category-wrapper");
+            const existingDropdown = wrapper.find(".subcategory-dropdown");
+            $(".subcategory-dropdown").not(existingDropdown).remove();
+
+            if (existingDropdown.length > 0) {
+                existingDropdown.remove();
+                return;
+            }
+
+            createDropdown(parentId);
+        });
+
+        $(document).on("click", ".subcat-btn", function (e) {
+            e.preventDefault();
+
+            const val = $(this).data("subcatid");
+            let numId = null;
+            let isParentAll = false;
+
+            if (typeof val === "string" && val.startsWith("parent-")) {
+                numId = parseInt(val.split("-")[1]);
+                isParentAll = true;
+            } else {
+                numId = val;
+            }
+
+            if (isParentAll) {
+                // Clear subcategories, select only parent category
+                selectedSubcategoryIds.clear();
+                selectedCategoryIds.clear();
+                selectedCategoryIds.add(numId);
+            } else {
+                // Toggle subcategory multiselect
+                if (selectedSubcategoryIds.has(numId)) {
+                    selectedSubcategoryIds.delete(numId);
+                } else {
+                    selectedSubcategoryIds.add(numId);
+                    // Ensure parent category selected
+                    const parentCat = allSubCategories.find(sc => sc.categoryID === numId).parentID;
+                    selectedCategoryIds.add(parentCat);
+                }
+
+                // When subcategories selected, remove parent category from selection so filtering works as requested
+                if (selectedSubcategoryIds.size > 0) {
+                    selectedCategoryIds.delete(numId);
+                }
+            }
+
+            updateCategoryButtonStyles();
+            updateSubcategoryButtonStyles();
+        });
+
+        // Apply filters button triggers form submit with current selections
+        $(document).on("click", ".apply-subcats-btn", function (e) {
+            e.preventDefault();
+            submitForm();
+        });
+
+        updateCategoryButtonStyles();
+        updateSubcategoryButtonStyles();
+
+        // Close dropdown on outside click
+        $(document).on("click", function (e) {
+            if (!$(e.target).closest(".category-wrapper").length) {
+                $(".subcategory-dropdown").remove();
+            }
+        });
+
+        // Clear filters
+        $("#clearFiltersBtn").click(function () {
+            selectedCategoryIds.clear();
+            selectedSubcategoryIds.clear();
+            updateCategoryButtonStyles();
+            updateSubcategoryButtonStyles();
+            $(".subcategory-dropdown").remove();
+            $("#categoryInputs").empty();
             $("#filterForm").submit();
         });
     });
 </script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            @if (TempData["SuccessMessage"] != null)
-            {
-                    <text>
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Order Placed!',
-                            text: '@TempData["SuccessMessage"]',
-                            confirmButtonColor: '#007bff'
-                        });
-                    </text>
-            }
-        });
-    </script>
 
-<!-- Styles -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        @if (TempData["SuccessMessage"] != null)
+        {
+                <text>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Order Placed!',
+                        text: '@TempData["SuccessMessage"]',
+                        confirmButtonColor: '#007bff'
+                    });
+                </text>
+        }
+    });
+</script>
+
 <style>
     .category-filters {
         margin-top: 20px;
     }
 
-    .category-btn {
+    .category-btn, .subcat-btn {
         margin: 0 8px 8px 0;
         padding: 8px 12px;
+        background-color: white;
         border-radius: 6px;
         color: #007bff;
         border: 1px solid #007bff;
         cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease;
     }
+
+        .category-btn:hover, .subcat-btn:hover {
+            background-color: #007bff;
+            color: white;
+        }
 
     .order-cards {
         display: flex;
@@ -255,4 +395,46 @@
                 background-color: #007bff;
                 color: white;
             }
+
+    .subcategory-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 100;
+        background: white;
+        border: 1px solid #ccc;
+        padding: 10px;
+        width: 260px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-radius: 6px;
+        display: flex;
+        flex-direction:column;
+        gap: 8px;
+    }
+
+    .clear-filter-btn {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #dc3545;
+        background-color: white;
+        color: #dc3545;
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+        .clear-filter-btn:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+
+    .apply-subcats-btn {
+        margin: 0 8px 8px 0;
+        padding: 8px 12px;
+        background-color: #007bff;
+        border-radius: 6px;
+        color: white;
+        border: 1px solid #007bff;
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
 </style>

@@ -33,27 +33,72 @@ namespace telerik.Controllers
         public IActionResult Shop(int page = 1, List<int> categoryIds = null)
         {
             int pageSize = 8;
+            var allCategories = _context.Categories.ToList();
 
-            var query = _context.Products.Include(p => p.Category).AsQueryable();
+            // Separate parent categories and subcategories
+            var parentCategoryIds = allCategories.Where(c => c.ParentCategoryID == null).Select(c => c.CategoryID).ToList();
+
+            List<int> selectedCategories = new List<int>();
+            List<int> selectedSubcategories = new List<int>();
 
             if (categoryIds != null && categoryIds.Any())
             {
-                query = query.Where(p => categoryIds.Contains(p.CategoryID));
+                // Filter subcategories: those with parentId != null and in categoryIds
+                selectedSubcategories = allCategories
+                    .Where(c => c.ParentCategoryID != null && categoryIds.Contains(c.CategoryID))
+                    .Select(c => c.CategoryID)
+                    .ToList();
+
+                if (selectedSubcategories.Any())
+                {
+                    // When subcategories selected, ignore parents
+                    selectedCategories = new List<int>();
+                }
+                else
+                {
+                    // Otherwise, only parents
+                    selectedCategories = categoryIds.Intersect(parentCategoryIds).ToList();
+                }
             }
 
-            var totalProducts = query.Count();
-            var pagedProducts = query
+            var query = _context.Products.Include(p => p.Category).AsQueryable();
+
+            if (selectedSubcategories.Any())
+            {
+                // Filter products to only those with category in selected subcategories
+                query = query.Where(p => selectedSubcategories.Contains(p.CategoryID));
+            }
+            else if (selectedCategories.Any())
+            {
+                // Filter products to categories (parents only)
+                query = query.Where(p => selectedCategories.Contains(p.CategoryID));
+            }
+
+            int totalCount = query.Count();
+            int totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var products = query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
 
-            ViewBag.TotalPages = (int)Math.Ceiling((double)totalProducts / pageSize);
+            ViewBag.TotalPages = totalPages;
             ViewBag.CurrentPage = page;
-            ViewBag.CategoryList = _context.Categories.ToList();
-            ViewBag.SelectedCategories = categoryIds;
+            ViewBag.CategoryList = allCategories.Where(c => c.ParentCategoryID == null).ToList(); // parent cats only
+            ViewBag.AllSubCategories = _context.Categories
+                .Where(c => c.ParentCategoryID != null)
+                .Select(c => new {
+                    categoryID = c.CategoryID,
+                    categoryName = c.CategoryName,
+                    parentID = c.ParentCategoryID
+                })
+                .ToList(); ViewBag.SelectedCategories = selectedCategories;
+            ViewBag.SelectedSubcategories = selectedSubcategories;
 
-            return View(pagedProducts);
+            return View(products);
         }
+
+
 
 
         public IActionResult Order()
