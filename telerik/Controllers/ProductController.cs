@@ -30,7 +30,7 @@ namespace telerik.Controllers
             return View();
         }
 
-        public IActionResult Shop(int page = 1, List<int> categoryIds = null)
+        public IActionResult Shop(int page = 1, List<int> categoryIds = null, bool includeSubcategories = false)
         {
             int pageSize = 8;
             var allCategories = _context.Categories.ToList();
@@ -43,27 +43,53 @@ namespace telerik.Controllers
 
             if (categoryIds != null && categoryIds.Any())
             {
-                // Filter subcategories: those with parentId != null and in categoryIds
-                selectedSubcategories = allCategories
-                    .Where(c => c.ParentCategoryID != null && categoryIds.Contains(c.CategoryID))
-                    .Select(c => c.CategoryID)
-                    .ToList();
-
-                if (selectedSubcategories.Any())
+                if (includeSubcategories)
                 {
-                    // When subcategories selected, ignore parents
-                    selectedCategories = new List<int>();
+                    // When includeSubcategories flag is true, categoryIds contains exactly one parent category ID
+                    var parentCatId = categoryIds.First();
+
+                    // Get all subcategories under this parent
+                    var subCatIds = allCategories
+                        .Where(c => c.ParentCategoryID == parentCatId)
+                        .Select(c => c.CategoryID)
+                        .ToList();
+
+                    // Include both parent and subcategories in filter
+                    selectedCategories = new List<int> { parentCatId };
+                    selectedSubcategories = subCatIds;
                 }
                 else
                 {
-                    // Otherwise, only parents
-                    selectedCategories = categoryIds.Intersect(parentCategoryIds).ToList();
+                    // Filter subcategories: those with parentId != null and in categoryIds
+                    selectedSubcategories = allCategories
+                        .Where(c => c.ParentCategoryID != null && categoryIds.Contains(c.CategoryID))
+                        .Select(c => c.CategoryID)
+                        .ToList();
+
+                    if (selectedSubcategories.Any())
+                    {
+                        // When subcategories selected, ignore parents
+                        selectedCategories = new List<int>();
+                    }
+                    else
+                    {
+                        // Otherwise, only parents
+                        selectedCategories = categoryIds.Intersect(parentCategoryIds).ToList();
+                    }
                 }
             }
 
             var query = _context.Products.Include(p => p.Category).AsQueryable();
 
-            if (selectedSubcategories.Any())
+            if (includeSubcategories && selectedCategories.Any())
+            {
+                // Filter by parent category or any of its subcategories
+                var filterCatIds = new List<int>(selectedSubcategories);
+                filterCatIds.AddRange(selectedCategories); // parent + subs
+
+                query = query.Where(p => filterCatIds.Contains(p.CategoryID));
+            }
+            else if (selectedSubcategories.Any())
             {
                 // Filter products to only those with category in selected subcategories
                 query = query.Where(p => selectedSubcategories.Contains(p.CategoryID));
@@ -92,11 +118,14 @@ namespace telerik.Controllers
                     categoryName = c.CategoryName,
                     parentID = c.ParentCategoryID
                 })
-                .ToList(); ViewBag.SelectedCategories = selectedCategories;
+                .ToList();
+
+            ViewBag.SelectedCategories = selectedCategories;
             ViewBag.SelectedSubcategories = selectedSubcategories;
 
             return View(products);
         }
+
 
 
 

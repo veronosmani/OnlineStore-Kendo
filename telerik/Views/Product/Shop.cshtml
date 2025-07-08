@@ -196,11 +196,23 @@
                 numId = val;
             }
 
-            if (isParentAll) {
-                // Clear subcategories, select only parent category
-                selectedSubcategoryIds.clear();
-                selectedCategoryIds.clear();
-                selectedCategoryIds.add(numId);
+                if (isParentAll) {
+        // Clear all selections and select the parent category
+        selectedSubcategoryIds.clear();
+        selectedCategoryIds.clear();
+        selectedCategoryIds.add(numId);
+
+        // Submit immediately with special flag for parent + subcats
+        // Add a hidden input to indicate "include subcategories"
+        const container = $("#categoryInputs");
+        container.empty();
+
+        // Here we send the parent category ID and a flag
+        container.append(`<input type="hidden" name="categoryIds" value="${numId}" />`);
+        container.append(`<input type="hidden" name="includeSubcategories" value="true" />`);
+
+        $("#filterForm").submit();
+        return;  // Exit so no further processing
             } else {
                 // Toggle subcategory multiselect
                 if (selectedSubcategoryIds.has(numId)) {
